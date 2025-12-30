@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Universal Geo-Tool</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { height: 100vh; width: 100vw; }
+        
+        .ui-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:active { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="ui-overlay">
+    <button onclick="locateUser()">My Location</button>
+    <button onclick="shareLocation()">Share Link</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Initialize map - Using OpenStreetMap (Open Standard)
+    const map = L.map('map').setView([0, 0], 2);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let userMarker;
+
+    // 1. Requirement: Display & Navigate Logic
+    function locateUser() {
+        map.locate({setView: true, maxZoom: 16});
+    }
+
+    map.on('locationfound', function(e) {
+        if (userMarker) map.removeLayer(userMarker);
+        userMarker = L.marker(e.latlng).addTo(map)
+            .bindPopup("You are here").openPopup();
+    });
+
+    map.on('locationerror', function() {
+        alert("Location access denied or unavailable.");
+    });
+
+    // 2. Requirement: Share Location (Universal URL Method)
+    function shareLocation() {
+        const center = map.getCenter();
+        const shareUrl = `${window.location.origin}${window.location.pathname}?lat=${center.lat}&lon=${center.lng}`;
+        
+        // Use the native Share API if available (Mobile), otherwise copy to clipboard
+        if (navigator.share) {
+            navigator.share({
+                title: 'My Location',
+                url: shareUrl
+            });
+        } else {
+            prompt("Copy this universal location link:", shareUrl);
+        }
+    }
+
+    // Auto-load location from URL if present
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('lat') && params.has('lon')) {
+        const lat = params.get('lat');
+        const lon = params.get('lon');
+        map.setView([lat, lon], 15);
+        L.marker([lat, lon]).addTo(map).bindPopup("Shared Location").openPopup();
+    }
+</script>
+
+</body>
+</html>
